@@ -2,14 +2,6 @@
 
 """
 This is a script for generating coil footprints (spiral/rectangular) for PcbNew.
-
-To avoid generating plain text, we use official Python library that is used in
-KiCad to generate most of its footprints. The library can be found on github:
-    https://github.com/pointhi/kicad-footprint-generator
-It can be installed using pip, e.g.:
-    pip install git+https://github.com/pointhi/kicad-footprint-generator
-It is probably best to do this in a separate Python virtual environment.
-
 """
 
 import sys
@@ -161,28 +153,4 @@ if __name__ == '__main__':
 
     fp = coil_footrpint('Coil', 'One-layer coil', 'coil', segments + pads)
     save_footprint(fp, args.file_name)
-
-
-#  if __name__ == '__main__':
-#      coil_params = CoilParameters(r_inner=15, r_outer=25, n_turns=5, line_width=1.5)
-#
-#      arcs, start_point, end_point = spiral.coil_arcs(coil_params, points_per_turn=8, direction=1)
-#      spacing = spiral.line_spacing(coil_params)
-#      pads = coil_pads(start_point, end_point,
-#                       coil_params.line_width, 0.6 * coil_params.line_width,
-#                       'CONNECT', 'CIRCLE')
-#
-#      #  arcs, start_point, end_point = square.coil_lines(coil_params, direction=1)
-#      #  spacing = square.line_spacing(coil_params)
-#      #  pads = coil_pads(start_point, end_point,
-#      #                   coil_params.line_width, 0.6 * coil_params.line_width,
-#      #                   'CONNECT', 'RECTANGLE')
-#
-#      if spacing <= 0:
-#          print('[WARNING] line spaing <= 0', file=sys.stderr)
-#      else:
-#          print('line spacing =', spacing)
-#
-#      fp = coil_footrpint('SpiralCoil', 'Spiral coil on one layer', 'spiral_coil', arcs + pads)
-#      save_footprint(fp, 'test_file')
 
