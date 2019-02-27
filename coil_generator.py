@@ -24,22 +24,30 @@ def cmdline_args():
     parser.add_argument('coil_type', choices=['spiral', 'square'],
                         help='type of the coil created')
 
-    parser.add_argument('-r', '--r_inner', required=True, type=float,
-                        help='inner radius of the coil [mm]')
-    parser.add_argument('-R', '--r_outer', required=True, type=float,
-                        help='outer radius of the coil [mm]')
+    inner_group = parser.add_mutually_exclusive_group(required=True)
+    inner_group.add_argument('-r', '--r_inner', type=float,
+                             help='inner radius of the coil [mm]')
+    inner_group.add_argument('-d', '--d_inner', type=float,
+                             help='inner diameter of the coil [mm]')
+
+    outer_group = parser.add_mutually_exclusive_group(required=True)
+    outer_group.add_argument('-R', '--r_outer', type=float,
+                             help='outer radius of the coil [mm]')
+    outer_group.add_argument('-D', '--d_outer', type=float,
+                             help='outer diameter of the coil [mm]')
+
     parser.add_argument('-n', '--n_turns', required=True, type=float,
                         help='number of turns of the coil')
     parser.add_argument('-w', '--line_width', required=True, type=float,
                         help='width of the copper path used [mm]')
 
-    parser.add_argument('-d', '--direction',
+    parser.add_argument('--direction', '--dir',
                         choices=['counter_clockwise', 'clockwise'], default='counter_clockwise',
                         help='direction in which the coil turns (starting from outer part)')
 
     parser.add_argument('-p', '--pad_type', choices=['SMT', 'THT', 'CONNECT'], default='CONNECT',
                         help='type of the pads drawn at the ends of coil\'s path')
-    parser.add_argument('-D', '--drill_ratio', type=float, default=0.6,
+    parser.add_argument('-x', '--drill_ratio', type=float, default=0.6,
                         help='ratio of the drill in pad to line width (only for SMT/THT pads)')
 
     # spiral coil only
@@ -52,6 +60,15 @@ def cmdline_args():
         args.direction = 1
     elif args.direction == 'clockwise':
         args.direction = -1
+
+    if args.d_inner:
+        args.r_inner = args.d_inner / 2
+    else:
+        args.d_inner = args.r_inner * 2
+    if args.d_outer:
+        args.r_outer = args.d_outer / 2
+    else:
+        args.d_outer = args.r_outer * 2
 
     return args
 
