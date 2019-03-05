@@ -49,6 +49,8 @@ def cmdline_args():
                         help='type of the pads drawn at the ends of coil\'s path')
     parser.add_argument('-x', '--drill_ratio', type=float, default=0.6,
                         help='ratio of the drill in pad to line width (only for SMT/THT pads)')
+    parser.add_argument('-a', '--ring_width', type=float, default=0.25,
+                        help='Width of the ring around the drill')
 
     # spiral coil only
     parser.add_argument('--points_per_turn', default=4, type=float,
@@ -93,6 +95,7 @@ class CoilParameters:
             line_width=args.line_width,
         )
 
+
 def coil_footrpint(name, description, tags, other_parts):
     fp = kmt.Footprint(name)
     fp.setDescription(description)
@@ -106,6 +109,7 @@ def coil_footrpint(name, description, tags, other_parts):
         fp.append(part)
 
     return fp
+
 
 def coil_pads(start_point, end_point, line_width, drill, pad_type, pad_shape):
     if pad_type == 'SMT':
@@ -128,6 +132,8 @@ def coil_pads(start_point, end_point, line_width, drill, pad_type, pad_shape):
         pad_shape = kmt.Pad.SHAPE_CIRCLE
     else:
         raise Exception('pad_type must be one of "RECTANGLE" or "CIRCLE"')
+    if line_width - drill < 0.25:
+        raise Exception('The width of the ring has to be greater than 0.25mm')
     pads = []
     for i, pos in enumerate([start_point, end_point]):
         pad = kmt.Pad(number=i + 1, type=pad_type, shape=pad_shape,
@@ -147,6 +153,7 @@ def save_footprint(footprint, file_name):
 if __name__ == '__main__':
     args = cmdline_args()
     coil_params = CoilParameters.from_args(args)
+    drill_diameter = args.drill_ratio * coil_params.line_width
 
     if args.coil_type == 'spiral':
         segments, start_point, end_point = spiral.coil_arcs(coil_params,
@@ -154,13 +161,13 @@ if __name__ == '__main__':
                                                             direction=args.direction)
         spacing = spiral.line_spacing(coil_params)
         pads = coil_pads(start_point, end_point,
-                         coil_params.line_width, args.drill_ratio * coil_params.line_width,
+                         drill_diameter + args.ring_width, drill_diameter,
                          args.pad_type, 'CIRCLE')
     elif args.coil_type == 'square':
         segments, start_point, end_point = square.coil_lines(coil_params, direction=args.direction)
         spacing = square.line_spacing(coil_params)
         pads = coil_pads(start_point, end_point,
-                         coil_params.line_width, args.drill_ratio * coil_params.line_width,
+                         drill_diameter + args.ring_width, drill_diameter,
                          args.pad_type, 'RECTANGLE')
 
     if spacing <= 0:
