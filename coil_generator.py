@@ -4,14 +4,10 @@
 This is a script for generating coil footprints (spiral/rectangular) for PcbNew.
 """
 
-import sys
-import numpy as np
-import argparse
 
+import numpy as np
 import KicadModTree as kmt
 
-
-#import rectangle
 
 
 
@@ -20,19 +16,22 @@ def main():
 #INPUT PARAMETERS
     width = 20 #mm
     height = 40 #mm
-    thickness = 10 #mm
     line_width = 1 #mm
     line_spacing = 1
-    n_turns = np.floor((thickness + line_spacing)/(line_width + line_spacing)) # - THICKNESS FROM LINE TO LINE (round down)
-    # n_turns = np.floor(thickness/(line_width + line_spacing)) # - THICKNESS INCLUDING LAST PAD POSITION (round down)
-    coil_params = [width, height, thickness, line_width, line_spacing, n_turns]
+    n_turns = 5
+    coil_params = [width, height, line_width, line_spacing, n_turns]
 
+
+    if ((n_turns*(line_width + line_spacing) - line_spacing) > np.min((width, height))):
+        print('Error: too many turns for specified dimensions')
+        return
+
+#Pad parameters
     winding_direction = 1 # don't change  
     drill_diameter = 1 #args.drill_ratio * coil_params.line_width
     pad_OD = drill_diameter + 0.5
 
 
-    print('Calculated number of turns: ', n_turns)
 
 #CREATE COIL
     segments, start_point, end_point = rectangle_coil_lines(coil_params, winding_direction)
@@ -50,15 +49,14 @@ def rectangle_coil_lines(coil_params, direction):
 
     width = coil_params[0]
     height = coil_params[1]
-    thickness = coil_params[2]
-    line_width = coil_params[3]
-    line_spacing = coil_params[4]
-    n_turns = int(coil_params[5])
+    line_width = coil_params[2]
+    line_spacing = coil_params[3]
+    n_turns = int(coil_params[4])
 
     points = []
 
     #start at lower-left corner
-    points.append((-width/2, -height/2))
+    points.append((-width/2, height/2))
 
     # points.append((params.r_outer, - params.r_outer))
     for i in np.arange(n_turns):
@@ -69,10 +67,10 @@ def rectangle_coil_lines(coil_params, direction):
 
         if direction > 0:
             turn_points = [
-                (-x, y),
-                (x, y),
+                (-x, -y),
                 (x, -y),
-                (-next_x, -y),
+                (x, y),
+                (-next_x, y),
             ]
         else: print('NOT DONE YET')
             # turn_points = [
