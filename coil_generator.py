@@ -13,14 +13,36 @@ import KicadModTree as kmt
 
 def main():
 
+	run_create_component('F.Cu', 1)
+	run_create_component('B.Cu', 1)
+	# run_create_component('F.Cu', -1)
+	# run_create_component('B.Cu', -1)
+		
+	return
+
+
+
+def run_create_component(board_layer, winding_direction):
+
+
+	if (board_layer == 'F.Cu') and (winding_direction == 1):
+		component_name = 'front_pos'
+	elif (board_layer == 'B.Cu') and (winding_direction == 1):
+		component_name = 'back_pos'
+	elif (board_layer == 'F.Cu') and (winding_direction == -1):
+		component_name = 'front_neg'
+	elif (board_layer == 'B.Cu') and (winding_direction == -1):
+		component_name = 'back_neg'
+
+
+
 #INPUT PARAMETERS
-	winding_direction = -1 # +1 or -1  
-	
-	width = 15 #mm
-	height = 200 #mm
-	line_width = 0.153 #mm
+
+	width = 15.284 #mm - from solidworks
+	height = 675 #mm - from solidworks (acoustic length - 602 mm, total mandrel length - 711.2 mm)
+	line_width = 0.153 #mm - recommended minimum from oshpark
 	line_spacing = 0.153
-	n_turns = 20
+	n_turns = 24
 	coil_params = [width, height, line_width, line_spacing, n_turns]
 
 
@@ -30,22 +52,25 @@ def main():
 
 #Pad parameters
 	drill_diameter = 0.35 #args.drill_ratio * coil_params.line_width
-	pad_OD = 0.7
-	via_offset = 0.6
+	pad_OD = 0.6
+	via_offset = 1
 
 
 #CREATE COIL
-	segments, start_point, end_point = rectangle_coil_lines(coil_params, via_offset, winding_direction)
-	pads = coil_pads(start_point, end_point, pad_OD, drill_diameter, 'CONNECT')
+	
+	#Top layer
+	segments, start_point, end_point = rectangle_coil_lines(coil_params, board_layer, via_offset, winding_direction)
+	pads = coil_pads(start_point, end_point, pad_OD, drill_diameter)
+
 
 	fp = coil_footprint('Coil', 'One-layer coil', 'coil', segments + pads)
-	save_footprint(fp, 'test_footprint.kicad_mod')
+	save_footprint(fp, component_name + '.kicad_mod')
 
 
+	return
 
 
-
-def rectangle_coil_lines(coil_params, via_offset, direction):
+def rectangle_coil_lines(coil_params, board_layer, via_offset, winding_direction):
 
 
 	width = coil_params[0]
@@ -56,46 +81,66 @@ def rectangle_coil_lines(coil_params, via_offset, direction):
 
 	points = []
 
-	#start at lower-left corner
 
-	#For the first point, add an offset for the Via 
-	points.append((-width/2, height/2 + via_offset))
-	points.append((-width/2, height/2))
+#####################
+## FRONT POSITIVE
+	if (board_layer == 'F.Cu') and (winding_direction == 1):
+		points.append((-width/2, height/2 + via_offset))
+		points.append((-width/2, height/2))
 
-	# points.append((params.r_outer, - params.r_outer))
-	for i in np.arange(n_turns):
-
-		x = width/2 - i * (line_width + line_spacing)
-		y = height/2 - i * (line_width + line_spacing)
-
-		if direction == 1: #counter-clockwise
+		for i in np.arange(n_turns):
+			x = width/2 - i * (line_width + line_spacing)
+			y = height/2 - i * (line_width + line_spacing)
 			next_y = y - (line_width + line_spacing)
-			turn_points = [
-				(x, y),
-				(x, -y),
-				(-x, -y),
-				(-x, next_y),
-			]
-		elif direction  == -1: #clockwise
-			next_x = x - (line_width + line_spacing)
-			turn_points = [
-				(-x, -y),
-				(x, -y),
-				(x, y),
-				(-next_x, y),
-			]
+			turn_points = [(x, y),(x, -y),(-x, -y),(-x, next_y)]
+			points.extend(turn_points)
 
-		points.extend(turn_points)
-
-
-
-	#For the last point, add an offset for the Via 
-	if direction == 1:
+		#For the last point, add an offset for the Via 
 		points.append((0, next_y))
 		next_y = y - via_offset
 		points.append((0, next_y))
 
-	elif direction  == -1: 
+
+
+#####################
+## BACK POSITIVE
+	elif (board_layer == 'B.Cu') and (winding_direction == 1):
+		points.append((width/2, height/2 + via_offset))
+		points.append((width/2, height/2))
+
+
+		for i in np.arange(n_turns):
+			x = width/2 - i * (line_width + line_spacing)
+			y = height/2 - i * (line_width + line_spacing)
+			next_y = y - (line_width + line_spacing)
+			# turn_points = [(x, -y),(x, -y),(-x, -y),(-x, next_y)]
+
+			turn_points = [(-x, y),(-x, -y),(x, -y),(x, next_y)]
+
+			points.extend(turn_points)
+
+		#For the last point, add an offset for the Via 
+		points.append((0, next_y))
+		next_y = y - via_offset
+		points.append((0, next_y))
+
+
+
+
+#####################
+## FRONT NEGATIVE
+	elif (board_layer == 'F.Cu') and (winding_direction == -1):
+		points.append((-width/2, height/2 + via_offset))
+		points.append((-width/2, height/2))
+
+		for i in np.arange(n_turns):
+			x = width/2 - i * (line_width + line_spacing)
+			y = height/2 - i * (line_width + line_spacing)
+			next_x = x - (line_width + line_spacing)
+			turn_points = [(-x, -y),(x, -y),(x, y),(-next_x, y)]
+			points.extend(turn_points)
+
+		#For the last point, add an offset for the Via 
 		next_y = height/2 - (n_turns) * (line_width + line_spacing) #next_y not defined for direction == -1
 		next_y = y - via_offset
 		points.append((-next_x, next_y))
@@ -103,11 +148,30 @@ def rectangle_coil_lines(coil_params, via_offset, direction):
 		points.append((-next_x, next_y))
 
 
+#####################
+## BACK NEGATIVE
+	elif (board_layer == 'B.Cu') and (winding_direction == -1):
+		points.append((-width/2, height/2 + via_offset))
+		points.append((-width/2, height/2))
+
+		for i in np.arange(n_turns):
+			x = width/2 - i * (line_width + line_spacing)
+			y = height/2 - i * (line_width + line_spacing)
+			next_x = x - (line_width + line_spacing)
+			turn_points = [(-x, -y),(x, -y),(x, y),(-next_x, y)]
+			points.extend(turn_points)
+
+		#For the last point, add an offset for the Via 
+		next_y = height/2 - (n_turns) * (line_width + line_spacing) #next_y not defined for direction == -1
+		next_y = y - via_offset
+		points.append((-next_x, next_y))
+		next_x = next_x - via_offset
+		points.append((-next_x, next_y))
 
 
 	lines = []
 	for i in np.arange(len(points) - 1):
-		lines.append(kmt.Line(start=points[i], end=points[i + 1], width=line_width, layer='F.Cu'))
+		lines.append(kmt.Line(start=points[i], end=points[i + 1], width=line_width, layer=board_layer))
 
 	start_point = points[0]
 	end_point = points[-1]
@@ -133,7 +197,7 @@ def coil_footprint(name, description, tags, other_parts):
 	return fp
 
 
-def coil_pads(start_point, end_point, line_width, drill, pad_type):
+def coil_pads(start_point, end_point, line_width, drill):
 
 	pad_type = kmt.Pad.TYPE_THT
 	pad_layer = kmt.Pad.LAYERS_THT
