@@ -11,24 +11,91 @@ import argparse
 import KicadModTree as kmt
 
 
-import rectangle
+#import rectangle
 
 
-class CoilParameters:
-    def __init__(self, r_inner, r_outer, n_turns, line_width):
-        self.r_inner = r_inner
-        self.r_outer = r_outer
-        self.n_turns = n_turns
-        self.line_width = line_width
 
-    @staticmethod
-    def from_args(args):
-        return CoilParameters(
-            r_inner=args.r_inner,
-            r_outer=args.r_outer,
-            n_turns=args.n_turns,
-            line_width=args.line_width,
-        )
+def main():
+
+#INPUT PARAMETERS
+    width = 20 #mm
+    height = 40 #mm
+    thickness = 10 #mm
+    line_width = 1 #mm
+    line_spacing = 1
+    n_turns = np.floor((thickness + line_spacing)/(line_width + line_spacing)) # - THICKNESS FROM LINE TO LINE (round down)
+    # n_turns = np.floor(thickness/(line_width + line_spacing)) # - THICKNESS INCLUDING LAST PAD POSITION (round down)
+    coil_params = [width, height, thickness, line_width, line_spacing, n_turns]
+
+    winding_direction = 1 # don't change  
+    drill_diameter = 1 #args.drill_ratio * coil_params.line_width
+    pad_OD = drill_diameter + 0.5
+
+
+    print('Calculated number of turns: ', n_turns)
+
+#CREATE COIL
+    segments, start_point, end_point = rectangle_coil_lines(coil_params, winding_direction)
+    pads = coil_pads(start_point, end_point, pad_OD, drill_diameter, 'CONNECT', 'RECTANGLE')
+
+    fp = coil_footprint('Coil', 'One-layer coil', 'coil', segments + pads)
+    save_footprint(fp, 'test_footprint.kicad_mod')
+
+
+
+
+
+def rectangle_coil_lines(coil_params, direction):
+
+
+    width = coil_params[0]
+    height = coil_params[1]
+    thickness = coil_params[2]
+    line_width = coil_params[3]
+    line_spacing = coil_params[4]
+    n_turns = int(coil_params[5])
+
+    points = []
+
+    #start at lower-left corner
+    points.append((-width/2, -height/2))
+
+    # points.append((params.r_outer, - params.r_outer))
+    for i in np.arange(n_turns):
+        x = width/2 - i * (line_width + line_spacing)
+        y = height/2 - i * (line_width + line_spacing)
+
+        next_x = x - (line_width + line_spacing)
+
+        if direction > 0:
+            turn_points = [
+                (-x, y),
+                (x, y),
+                (x, -y),
+                (-next_x, -y),
+            ]
+        else: print('NOT DONE YET')
+            # turn_points = [
+            #     (-x, -y),
+            #     (-x, y),
+            #     (x, y),
+            #     (x, -next_y),
+            # ]
+        points.extend(turn_points)
+
+
+    lines = []
+    for i in range(len(points) - 1):
+        lines.append(kmt.Line(start=points[i], end=points[i + 1],
+                              width=line_width, layer='F.Cu'))
+
+    start_point = points[0]
+    end_point = points[-1]
+
+    return lines, start_point, end_point
+
+
+
 
 
 def coil_footprint(name, description, tags, other_parts):
@@ -85,28 +152,9 @@ def save_footprint(footprint, file_name):
     file_handler.writeFile(file_name)
 
 
-if __name__ == '__main__':
-
-    winding_direction = 1 # don't change  
-    drill_diameter = 1 #args.drill_ratio * coil_params.line_width
-    pad_OD = drill_diameter + 0.5
-
-    width = 8 #mm
-    height = 500 #mm
-    thickness = 3 #mm
-    line_width = 0.2 #mm
-    line_spacing = 0.2
-
-    n_turns = np.floor((thickness + line_spacing)/(line_width + line_spacing)) # - THICKNESS FROM LINE TO LINE (round down)
-    # n_turns = np.floor(thickness/(line_width + line_spacing)) # - THICKNESS INCLUDING LAST PAD POSITION (round down)
-
-    coil_params = [width, height, thickness, line_width, line_spacing, n_turns]
-
-    segments, start_point, end_point = rectangle.coil_lines(coil_params, winding_direction)
-    pads = coil_pads(start_point, end_point, pad_OD, drill_diameter, 'CONNECT', 'RECTANGLE')
 
 
 
-    fp = coil_footprint('Coil', 'One-layer coil', 'coil', segments + pads)
-    save_footprint(fp, 'test_footprint.kicad_mod')
+if __name__ == '__main__': main()
+
 
