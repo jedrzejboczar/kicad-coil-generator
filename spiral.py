@@ -61,8 +61,7 @@ def arc_through_3_points(A, B, C):
 
     return tuple(D), angle_rad
 
-
-def coil_arcs(params, points_per_turn=4, direction=+1):
+def coil_arcs(params):
     """
     Approximates Archimedean spiral by a sequence of arcs.
     For each spiral revolution 'points_per_turn' are taken and an arc
@@ -82,11 +81,17 @@ def coil_arcs(params, points_per_turn=4, direction=+1):
     We first define the spiral as if it had 0 line width,
     only when generating footprint we draw with the actual width.
     """
+    if params.n_turns is None:
+        return coil_arcs_by_spacing(params)
+    else:
+        return coil_arcs_by_turns(params)
+
+def coil_arcs_by_turns(params):
     total_angle = 360 * params.n_turns
-    b = (params.r_outer - params.r_inner) / math.radians(total_angle) * direction
+    b = (params.r_outer - params.r_inner) / math.radians(total_angle) * params.direction
 
     # calculate all the angles at which we evaluate points
-    angle_increment = 360.0 / points_per_turn
+    angle_increment = 360.0 / params.points_per_turn
     n_increments = int(total_angle / angle_increment)
     angles = [angle_increment * i for i in range(n_increments)]
     if angles[-1] < total_angle:
@@ -110,7 +115,7 @@ def coil_arcs(params, points_per_turn=4, direction=+1):
 
         # calculate the center and angle of the arc
         center, angle_rad = arc_through_3_points(start, mid, end)
-        if direction > 0:
+        if params.direction > 0:
             if angle_rad < 0:
                 angle_rad += 2 * pi
         else:
@@ -128,6 +133,15 @@ def coil_arcs(params, points_per_turn=4, direction=+1):
 
     return arcs, start_point, end_point
 
+def coil_arcs_by_spacing(params):
+    # given the inner and outer radius, we know the distance to be covered by the coil.
+    # we can calculate the number of turns using the width of each line and the space between each line.
+    fill_space = params.r_outer - params.r_inner
+    line_space = params.line_width + params.spacing
+    n_turns = fill_space / line_space
+    params.n_turns = n_turns
+    return coil_arcs_by_turns(params)
+
 def line_spacing(params):
     """
     Calculates the space left between subsequent lines of the spiral
@@ -136,11 +150,14 @@ def line_spacing(params):
     be high enough to avoid electrical interference.
     Negative spacing is...too small.
     """
-    total_angle = 360 * params.n_turns
-    b = (params.r_outer - params.r_inner) / math.radians(total_angle)
-    r0 = params.r_inner + b * 0
-    r1 = params.r_inner + b * 2 * pi
-    delta_r = abs(r1 - r0)
-    spacing = delta_r - params.line_width
-    return spacing
+    if params.spacing is not None:
+        return params.spacing
+    else:
+        total_angle = 360 * params.n_turns
+        b = (params.r_outer - params.r_inner) / math.radians(total_angle)
+        r0 = params.r_inner + b * 0
+        r1 = params.r_inner + b * 2 * pi
+        delta_r = abs(r1 - r0)
+        spacing = delta_r - params.line_width
+        return spacing
 
